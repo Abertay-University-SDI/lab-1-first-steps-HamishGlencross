@@ -7,6 +7,8 @@ public:
 	Level(sf::RenderWindow& window, Input& input);
 	~Level() override = default;
 
+	bool m_isGameOver = false;
+
 	void handleInput(float dt) override;
 	void update(float dt);
 	void render();
@@ -20,7 +22,16 @@ private:
 
 	// Default variables for level class.
 	
-	sf::CircleShape m_player;
+	float m_gameTime;
 
+	sf::CircleShape m_player;
+	sf::CircleShape m_food;
+	
+	void spawnFood();
+	int m_foodEaten;
+
+	enum class DirectionPressed { UP, DOWN, LEFT, RIGHT};
+	DirectionPressed m_direction;
+	
 	//sf::Text m_dReminder;
 };
