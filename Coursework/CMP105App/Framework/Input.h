@@ -11,7 +11,7 @@
 class Input
 {
 public:
-	enum class MouseState { UP, DOWN, PRESSED };
+	enum class MouseState { UP, DOWN, PRESSED, SCROLL_NO, SCROLL_UP, SCROLL_DOWN};
 
 	Input();
 	// Functions for setting key as pressed, released and checking current state.
@@ -36,6 +36,16 @@ public:
 	bool isRightMouseDown();
 	bool isRightMousePressed();
 
+	// scrolling functionality (Added by hamish Glencross 23/01/2026)
+
+	//may not need these two
+	void setScrollingUp(MouseState state);
+	void setScrollingDown(MouseState state);
+	void setScrollingNo(MouseState state);
+
+	bool isScrollingUp();
+	bool isScrollingDown();
+
 private:
 	// booleans representing keys (pressed = true, released = false)
 	std::vector<bool> m_keys;
@@ -45,7 +55,7 @@ private:
 	struct Mouse
 	{
 		int x, y;
-		MouseState left, right;
+		MouseState left, right, scroll;
 	};
 	// Mouse variable
 	Mouse m_mouse;

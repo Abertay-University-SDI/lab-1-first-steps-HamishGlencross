@@ -62,6 +62,29 @@ void windowProcess(sf::RenderWindow& window, Input& in)
 		{
 			in.setMousePosition(mouseMoved->position.x, mouseMoved->position.y);
 		}
+		if (const auto* mouseScrolled = event->getIf<sf::Event::MouseWheelScrolled>())
+		{
+			if (mouseScrolled->wheel == sf::Mouse::Wheel::Vertical)
+			{
+				if (mouseScrolled->delta > 0)
+				{
+					in.setScrollingUp(Input::MouseState::SCROLL_UP);
+				}
+				else 
+				{
+					if (mouseScrolled->delta < 0)
+					{
+						in.setScrollingDown(Input::MouseState::SCROLL_DOWN);
+					}
+					else
+					{
+						in.setScrollingNo(Input::MouseState::SCROLL_NO);
+					}
+				}
+				
+			}
+
+		}
 		/*
 		* There are other events you may wish to poll for, such as:
 		* controller or joystick input, scrolling mouse wheel or focus gained/lost

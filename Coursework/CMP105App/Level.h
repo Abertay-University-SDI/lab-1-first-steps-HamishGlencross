@@ -8,6 +8,10 @@ public:
 	~Level() override = default;
 
 	bool m_isGameOver = false;
+	bool m_portalWallMode;
+
+	int m_noOfLives;
+	int m_foodToWin;
 
 	void handleInput(float dt) override;
 	void update(float dt);
@@ -30,7 +34,7 @@ private:
 	void spawnFood();
 	int m_foodEaten;
 
-	enum class DirectionPressed { UP, DOWN, LEFT, RIGHT};
+	enum class DirectionPressed { UP, DOWN, LEFT, RIGHT, NONE};
 	DirectionPressed m_direction;
 	
 	//sf::Text m_dReminder;

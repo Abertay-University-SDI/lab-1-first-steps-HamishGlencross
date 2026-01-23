@@ -4,7 +4,12 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 	BaseLevel(hwnd, in)
 {	
 	srand(time(0));
+
+	m_portalWallMode = true;
 	
+	m_foodToWin = 10;
+	m_noOfLives = 3;
+
 	m_gameTime = 0.f;
 	m_foodEaten = 0;
 
@@ -31,31 +36,43 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 // handle user input
 void Level::handleInput(float dt)
 {
-	if (m_input.isLeftMousePressed())
+	if (!m_isGameOver)
 	{
-		std::cout << "left mouse pressed" << std::endl;
+		if (m_input.isLeftMousePressed())
+		{
+			std::cout << "left mouse pressed" << std::endl;
+		}
+		if (m_input.isKeyDown(sf::Keyboard::Scancode::D))
+		{
+			std::cout << "D pressed" << std::endl;
+			m_direction = DirectionPressed::RIGHT;
+		}
+		if (m_input.isKeyDown(sf::Keyboard::Scancode::S))
+		{
+			std::cout << "S pressed" << std::endl;
+			m_direction = DirectionPressed::DOWN;
+		}
+		if (m_input.isKeyDown(sf::Keyboard::Scancode::A))
+		{
+			std::cout << "A pressed" << std::endl;
+			m_direction = DirectionPressed::LEFT;
+		}
+		if (m_input.isKeyDown(sf::Keyboard::Scancode::W))
+		{
+			std::cout << "W pressed" << std::endl;
+			m_direction = DirectionPressed::UP;
+		}
+		if (m_input.isScrollingUp())
+		{
+			std::cout << "Scrolled Up" << std::endl;
+			m_player.setRadius(m_player.getRadius() * 1.05);
+		}
+		if (m_input.isScrollingDown())
+		{
+			std::cout << "Scrolled Down" << std::endl;
+			m_player.setRadius(m_player.getRadius() / 1.05);
+		}
 	}
-	if (m_input.isKeyDown(sf::Keyboard::Scancode::D)) 
-	{
-		std::cout << "D pressed" << std::endl;
-		m_direction = DirectionPressed::RIGHT;
-	}
-	if (m_input.isKeyDown(sf::Keyboard::Scancode::S))
-	{
-		std::cout << "S pressed" << std::endl;
-		m_direction = DirectionPressed::DOWN;
-	}
-	if (m_input.isKeyDown(sf::Keyboard::Scancode::A))
-	{
-		std::cout << "A pressed" << std::endl;
-		m_direction = DirectionPressed::LEFT;
-	}
-	if (m_input.isKeyDown(sf::Keyboard::Scancode::W))
-	{
-		std::cout << "W pressed" << std::endl;
-		m_direction = DirectionPressed::UP;
-	}
-
 }
 
 // Update game objects
@@ -68,20 +85,40 @@ void Level::update(float dt)
 
 	m_playerStartPos = { m_window.getSize().x/2.f, m_window.getSize().y/2.f};
 	
-	//==========
-	// Bounding
-	//==========
+	//================
+	// Wall collision
+	//================
 
 	if (m_player.getPosition().x > m_window.getSize().x || 
 		m_player.getPosition().x < 0 || 
 		m_player.getPosition().y > m_window.getSize().y || 
 		m_player.getPosition().y < 0)
 	{
-		std::cout << "GAME OVER" << std::endl;
-		std::cout << "Game Time: " << m_gameTime << std::endl;
-		std::cout << "Food Eaten: " << m_foodEaten << std::endl;
+		if (m_portalWallMode)
+		{
+			//doesnt work, mirrors movement along axis of travel. Also should account for radius
+			m_player.setPosition({ abs(m_player.getPosition().x - m_window.getSize().x), abs(m_player.getPosition().y - m_window.getSize().y) });
+		}
+		else
+		{
+			m_noOfLives--;
 
-		m_isGameOver = true;
+			if (m_noOfLives > 0)
+			{
+				std::cout << "You lost a life, Lives left: " << m_noOfLives << std::endl;
+
+				m_player.setPosition({ m_window.getSize().x / 2.f, m_window.getSize().y / 2.f });
+				m_direction = Level::DirectionPressed::NONE;
+			}
+			else
+			{
+				std::cout << "GAME OVER" << std::endl;
+				std::cout << "Game Time: " << m_gameTime << std::endl;
+				std::cout << "Food Eaten: " << m_foodEaten << std::endl;
+
+				m_isGameOver = true;
+			}
+		}		
 	}
 
 	//====================
@@ -102,13 +139,15 @@ void Level::update(float dt)
 	case Level::DirectionPressed::RIGHT:
 		m_player.move({ m_playerSpeed * dt,0 });
 		break;
+	case Level::DirectionPressed::NONE:
+		break;
 	default:
 		break;
 	}
 
-	//===========
-	// Collision
-	//===========
+	//================
+	// Food Collision
+	//================
 
 	float x_dist = (m_player.getPosition().x + m_player.getRadius()) - (m_food.getPosition().x + m_food.getRadius());
 	float y_dist = (m_player.getPosition().y + m_player.getRadius()) - (m_food.getPosition().y + m_food.getRadius());
@@ -125,13 +164,33 @@ void Level::update(float dt)
 		m_playerSpeed *= 1.1f;
 	}
 
+	//===============
+	// Win Detection
+	//===============
+
+	if (m_foodEaten >= m_foodToWin)
+	{
+		m_isGameOver = true;
+
+		std::cout << "YOU WIN!" << std::endl;
+		std::cout << "Game Time: " << m_gameTime << std::endl;
+		//std::cout << "Food Eaten: " << m_foodEaten << std::endl;
+	}
+
 	m_gameTime += dt;
 }
 
 void Level::spawnFood()
 {
-	float x = rand() % m_window.getSize().x;
-	float y = rand() % m_window.getSize().y;
+	float x = rand() % (m_window.getSize().x);
+	float y = rand() % (m_window.getSize().y);
+
+	//ensures food doesnt spawn too close to the edge
+
+	if (x < m_player.getRadius() * 1.25f) { x += m_player.getRadius(); }
+	if (x > m_window.getSize().x - (m_player.getRadius() * 1.25f)) { x -= m_player.getRadius(); }
+	if (y < m_player.getRadius() * 1.25f) { x += m_player.getRadius(); }
+	if (y > m_window.getSize().y - (m_player.getRadius() * 1.25f)) { y -= m_player.getRadius(); }
 
 	m_food.setPosition({x,y});
 }

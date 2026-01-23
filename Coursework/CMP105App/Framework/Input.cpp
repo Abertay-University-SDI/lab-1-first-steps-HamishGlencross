@@ -10,6 +10,7 @@ Input::Input()
 	// set default values
 	m_mouse.left = MouseState::UP;
 	m_mouse.right = MouseState::UP;
+	m_mouse.scroll = MouseState::SCROLL_NO;
 	m_mouse.x = 0;
 	m_mouse.y = 0;
 }
@@ -65,6 +66,10 @@ void Input::update()
 	if (m_mouse.right == MouseState::PRESSED)
 	{
 		m_mouse.right = MouseState::DOWN;
+	}
+	if (m_mouse.scroll != MouseState::SCROLL_NO)
+	{
+		m_mouse.scroll = MouseState::SCROLL_NO;
 	}
 }
 
@@ -137,6 +142,42 @@ bool Input::isRightMousePressed()
 	if (m_mouse.right == MouseState::PRESSED)
 	{
 
+		return true;
+	}
+	return false;
+}
+
+
+//scrolling
+
+void Input::setScrollingUp(MouseState state)
+{
+	m_mouse.scroll = state;
+}
+
+void Input::setScrollingDown(MouseState state)
+{
+	m_mouse.scroll = state;
+}
+
+void Input::setScrollingNo(MouseState state)
+{
+	m_mouse.scroll = state;
+}
+
+bool Input::isScrollingUp()
+{
+	if (m_mouse.scroll == MouseState::SCROLL_UP)
+	{
+		return true;
+	}
+	return false;
+}
+
+bool Input::isScrollingDown()
+{
+	if (m_mouse.scroll == MouseState::SCROLL_DOWN)
+	{
 		return true;
 	}
 	return false;
