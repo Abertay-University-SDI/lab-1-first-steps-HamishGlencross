@@ -5,7 +5,12 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 {	
 	srand(time(0));
 
-	m_portalWallMode = true;
+	m_timerMode = false;
+
+	m_startedMoving = false;
+	
+	m_foodTimerLength = 5;
+	m_foodTimer = m_foodTimerLength;
 	
 	m_foodToWin = 10;
 	m_noOfLives = 3;
@@ -21,6 +26,9 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 
 	m_food.setRadius(5.f);
 	m_food.setFillColor(sf::Color::Yellow);
+
+	m_wall.setSize({ 50.f,25.f });
+	m_wall.setPosition({ 600.f, 300.f });
 
 	spawnFood();
 
@@ -78,28 +86,48 @@ void Level::handleInput(float dt)
 // Update game objects
 void Level::update(float dt)
 {
-	if (m_isGameOver) 
+	if (m_isGameOver)
 	{
 		return;
 	}
 
-	m_playerStartPos = { m_window.getSize().x/2.f, m_window.getSize().y/2.f};
-	
+	// In update because can be changed while playing
+	m_playerStartPos = { m_window.getSize().x / 2.f, m_window.getSize().y / 2.f };
+
+	m_player.setOrigin({ m_player.getRadius(), m_player.getRadius() });
+
+
 	//================
 	// Wall collision
 	//================
 
-	if (m_player.getPosition().x > m_window.getSize().x || 
+	if (m_timerMode)
+	{
+		if (m_player.getPosition().x > m_window.getSize().x)
+		{
+			m_player.setPosition({ 0 , m_player.getPosition().y });
+		}
+		if (m_player.getPosition().x < 0)
+		{
+			m_player.setPosition({ (float)m_window.getSize().x , m_player.getPosition().y });
+		}
+		if (m_player.getPosition().y > m_window.getSize().y)
+		{
+			m_player.setPosition({ m_player.getPosition().x , 0 });
+		}
+		if (m_player.getPosition().y < 0)
+		{
+			m_player.setPosition({ m_player.getPosition().x , (float)m_window.getSize().y });
+		}
+			
+		//Also should account for radius
+	}
+	else
+	{
+		if (m_player.getPosition().x > m_window.getSize().x ||
 		m_player.getPosition().x < 0 || 
 		m_player.getPosition().y > m_window.getSize().y || 
 		m_player.getPosition().y < 0)
-	{
-		if (m_portalWallMode)
-		{
-			//doesnt work, mirrors movement along axis of travel. Also should account for radius
-			m_player.setPosition({ abs(m_player.getPosition().x - m_window.getSize().x), abs(m_player.getPosition().y - m_window.getSize().y) });
-		}
-		else
 		{
 			m_noOfLives--;
 
@@ -129,15 +157,19 @@ void Level::update(float dt)
 	{
 	case Level::DirectionPressed::UP:
 		m_player.move({ 0,-m_playerSpeed * dt });
+		m_startedMoving = true;
 		break;
 	case Level::DirectionPressed::DOWN:
 		m_player.setPosition({ m_player.getPosition().x, m_player.getPosition().y + m_playerSpeed * dt });
+		m_startedMoving = true;
 		break;
 	case Level::DirectionPressed::LEFT:
 		m_player.move({ -m_playerSpeed * dt,0 });
+		m_startedMoving = true;
 		break;
 	case Level::DirectionPressed::RIGHT:
 		m_player.move({ m_playerSpeed * dt,0 });
+		m_startedMoving = true;
 		break;
 	case Level::DirectionPressed::NONE:
 		break;
@@ -149,20 +181,35 @@ void Level::update(float dt)
 	// Food Collision
 	//================
 
-	float x_dist = (m_player.getPosition().x + m_player.getRadius()) - (m_food.getPosition().x + m_food.getRadius());
-	float y_dist = (m_player.getPosition().y + m_player.getRadius()) - (m_food.getPosition().y + m_food.getRadius());
-
-	float squared_dist = (x_dist * x_dist) + (y_dist * y_dist);
-	float radii_sum = m_player.getRadius() + m_food.getRadius();
-
-	if (squared_dist < (radii_sum * radii_sum))
+	if (m_player.getGlobalBounds().findIntersection(m_food.getGlobalBounds()))
 	{
 		//collision detected
 		m_foodEaten++;
 
 		spawnFood();
 		m_playerSpeed *= 1.1f;
+
+		if (m_timerMode)
+		{
+			m_foodTimer = m_foodTimerLength;
+		}
 	}
+
+	//======================
+	// Wall/Enemy Collision
+	//======================
+	
+	//eeek
+
+	if (m_wall.getGlobalBounds().findIntersection(m_player.getGlobalBounds()) && !m_timerMode)
+	{
+		std::cout << "You lost a life, Lives left: " << m_noOfLives << std::endl;
+
+		m_player.setPosition({ m_window.getSize().x / 2.f, m_window.getSize().y / 2.f });
+		m_direction = Level::DirectionPressed::NONE;
+	}
+	
+
 
 	//===============
 	// Win Detection
@@ -175,6 +222,27 @@ void Level::update(float dt)
 		std::cout << "YOU WIN!" << std::endl;
 		std::cout << "Game Time: " << m_gameTime << std::endl;
 		//std::cout << "Food Eaten: " << m_foodEaten << std::endl;
+	}
+
+	//===========================
+	// Timer mode loss detection
+	//===========================
+
+	if (m_timerMode)
+	{
+		if (m_foodTimer < 0)
+		{
+			std::cout << "GAME OVER" << std::endl;
+			std::cout << "Game Time: " << m_gameTime << std::endl;
+			std::cout << "Food Eaten: " << m_foodEaten << std::endl;
+
+			m_isGameOver = true;
+		}
+	}
+
+	if (m_timerMode && m_startedMoving) 
+	{
+		m_foodTimer -= dt;
 	}
 
 	m_gameTime += dt;
@@ -192,6 +260,12 @@ void Level::spawnFood()
 	if (y < m_player.getRadius() * 1.25f) { x += m_player.getRadius(); }
 	if (y > m_window.getSize().y - (m_player.getRadius() * 1.25f)) { y -= m_player.getRadius(); }
 
+	if (m_wall.getGlobalBounds().contains({ x, y }))
+	{
+		x *= rand() % 2;
+		y *= rand() % 2;
+	}
+
 	m_food.setPosition({x,y});
 }
 
@@ -204,8 +278,7 @@ void Level::render()
 
 	m_window.draw(m_food);
 
+	m_window.draw(m_wall);
+
 	endDraw();
 }
-
-
-
